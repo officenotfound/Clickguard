@@ -13,9 +13,20 @@ struct SettingsView: View {
             Divider().opacity(0.5)
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
+                    sectionLabel("DOUBLE-CLICK FIX")
                     thresholdCard
                     buttonsCard
+
+                    sectionLabel("SCROLL WHEEL FIX")
+                    scrollCard
+
+                    sectionLabel("DRAG & DROP FIX")
+                    dragCard
+
+                    sectionLabel("GENERAL")
                     generalCard
+
+                    sectionLabel("ACTIVITY")
                     activityCard
                 }
                 .padding(14)
@@ -121,6 +132,58 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Scroll wheel fix
+
+    private var scrollCard: some View {
+        CardView {
+            VStack(spacing: 0) {
+                CardRow(first: settings.scrollFixEnabled ? false : true, last: !settings.scrollFixEnabled) {
+                    ToggleRow(label: "Filter scroll jitter", icon: "scroll", isOn: $settings.scrollFixEnabled)
+                }
+                if settings.scrollFixEnabled {
+                    Divider().padding(.leading, 32).opacity(0.4)
+                    CardRow(last: true) {
+                        StepperRow(label: "Reversal threshold",
+                                   value: $settings.scrollThresholdMs,
+                                   range: 1...300, step: 5, unit: "ms")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Drag & drop fix
+
+    private var dragCard: some View {
+        CardView {
+            VStack(spacing: 0) {
+                CardRow(first: true, last: !settings.dragFixEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ToggleRow(label: "Prevent drops while dragging", icon: "hand.draw", isOn: $settings.dragFixEnabled)
+                        Text("Experimental — enable only if your mouse drops items mid-drag.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 22)
+                    }
+                }
+                if settings.dragFixEnabled {
+                    Divider().padding(.leading, 32).opacity(0.4)
+                    CardRow {
+                        StepperRow(label: "Drag start delay",
+                                   value: $settings.dragStartDelayMs,
+                                   range: 100...3000, step: 100, unit: "ms")
+                    }
+                    Divider().padding(.leading, 32).opacity(0.4)
+                    CardRow(last: true) {
+                        StepperRow(label: "Release delay",
+                                   value: $settings.dragReleaseDelayMs,
+                                   range: 50...500, step: 25, unit: "ms")
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - General
 
     private var generalCard: some View {
@@ -137,7 +200,7 @@ struct SettingsView: View {
         CardView {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Recent filtered clicks")
+                    Text("Recent filtered events")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -152,7 +215,7 @@ struct SettingsView: View {
                 }
 
                 if filter.recentEvents.isEmpty {
-                    Text("No clicks filtered yet")
+                    Text("Nothing filtered yet")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -161,11 +224,11 @@ struct SettingsView: View {
                     VStack(spacing: 3) {
                         ForEach(filter.recentEvents.prefix(6), id: \.date) { ev in
                             HStack(spacing: 6) {
-                                Image(systemName: "hand.tap.fill")
+                                Image(systemName: icon(for: ev.kind))
                                     .font(.system(size: 10))
                                     .foregroundStyle(.tertiary)
                                     .frame(width: 14)
-                                Text("\(ev.button.rawValue)")
+                                Text(ev.kind.rawValue)
                                     .font(.system(size: 11))
                                 Spacer()
                                 Text(ev.date, style: .relative)
@@ -199,6 +262,23 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 4)
+            .padding(.top, 2)
+    }
+
+    private func icon(for kind: FilterEvent.Kind) -> String {
+        switch kind {
+        case .left, .right, .middle: return "hand.tap.fill"
+        case .scroll:                return "scroll"
+        case .drag:                  return "hand.draw"
+        }
+    }
 
     private func applyThresholdInput() {
         if let v = Int(thresholdInput), (1...500).contains(v) {
@@ -249,5 +329,28 @@ private struct ToggleRow: View {
         }
         .toggleStyle(.switch)
         .controlSize(.small)
+    }
+}
+
+private struct StepperRow: View {
+    let label: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let step: Int
+    let unit: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+            Spacer()
+            Text("\(value) \(unit)")
+                .font(.system(size: 12, weight: .medium).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 52, alignment: .trailing)
+            Stepper("", value: $value, in: range, step: step)
+                .labelsHidden()
+                .controlSize(.small)
+        }
     }
 }

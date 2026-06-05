@@ -34,11 +34,18 @@ If a click is being filtered that you actually meant, just lower the threshold. 
 
 ## Features
 
-- Configurable bounce threshold (default 50 ms)
-- Per-button filtering — left, right, and middle independently
-- Live activity log showing exactly which clicks were filtered
-- Launch at login
+- **Double-click filtering** — configurable bounce threshold (default 50 ms), per-button (left, right, middle). Suppresses the bounced click *and* its orphaned release so apps never see a stray event.
+- **Scroll wheel fix** — suppresses spurious reverse-direction scroll jitter on both vertical and horizontal wheels, while leaving intentional fast scrolling untouched. Off by default.
+- **Drag & drop fix** *(experimental)* — absorbs momentary glitch-releases during a drag so a faulty switch can't drop the item you're moving. Off by default.
+- **Live activity log** — shows exactly which clicks, scrolls, and drags were filtered, in real time.
+- **Launch at login**
 - Tiny footprint — runs entirely in your menu bar, no dock icon
+
+### How each fix works
+
+- **Click debounce:** when a button is pressed again sooner than a human realistically could after releasing it (under the threshold), the press is treated as switch bounce and discarded.
+- **Scroll fix:** the app tracks the last scroll direction per axis; a scroll tick that reverses direction within the threshold window is treated as jitter and dropped.
+- **Drag fix:** once you've held a button and moved past a few pixels, ClickGuard briefly delays the button release. If a fresh press arrives during that window, it was a glitch — the release is cancelled and the drag continues uninterrupted.
 
 ## Requirements
 
