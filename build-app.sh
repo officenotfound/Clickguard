@@ -8,7 +8,7 @@ echo "Building..."
 swift build -c release
 
 # Generate icon if it doesn't exist yet
-if [ ! -f DoubleClickFix/Resources/AppIcon.icns ]; then
+if [ ! -f ClickGuard/Resources/AppIcon.icns ]; then
     echo "Generating icon..."
     bash make-icon.sh
 fi
@@ -19,8 +19,8 @@ mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
 
 cp .build/release/$BINARY_NAME "$APP/Contents/MacOS/$BINARY_NAME"
-cp DoubleClickFix/Info.plist "$APP/Contents/Info.plist"
-cp DoubleClickFix/Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp ClickGuard/Info.plist "$APP/Contents/Info.plist"
+cp ClickGuard/Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # Ad-hoc code sign so macOS treats it as a real app
 codesign --force --deep --sign - "$APP"

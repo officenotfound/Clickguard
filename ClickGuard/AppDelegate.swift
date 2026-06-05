@@ -4,75 +4,65 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
-    private var settingsWindow: NSWindow?
+    private var popover: NSPopover!
     private var accessibilityTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        setupPopover()
         setupStatusItem()
         requestAccessibilityAndStart()
+    }
+
+    // MARK: - Popover
+
+    private func setupPopover() {
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 300, height: 460)
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSHostingController(rootView: SettingsView())
+        // Remove default popover background so our ultraThinMaterial shows through
+        popover.setValue(true, forKeyPath: "shouldHideAnchor")
     }
 
     // MARK: - Status item
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(
-            systemSymbolName: "cursorarrow.click.2",
-            accessibilityDescription: "ClickGuard"
-        )
-        statusItem.button?.action = #selector(statusItemClicked)
-        statusItem.button?.target = self
-        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        if let btn = statusItem.button {
+            btn.image = NSImage(systemSymbolName: "cursorarrow.click.2", accessibilityDescription: "ClickGuard")
+            btn.action = #selector(togglePopover)
+            btn.target = self
+            btn.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
     }
 
-    @objc private func statusItemClicked() {
-        let event = NSApp.currentEvent
-        if event?.type == .rightMouseUp {
+    @objc private func togglePopover() {
+        guard let button = statusItem.button else { return }
+
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            popover.close()
             showContextMenu()
+            return
+        }
+
+        if popover.isShown {
+            popover.close()
         } else {
-            openSettings()
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
     private func showContextMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: "Open ClickGuard", action: #selector(togglePopover), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
-    }
-
-    // MARK: - Settings window
-
-    @objc func openSettings() {
-        if let win = settingsWindow {
-            win.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let view = NSHostingView(rootView: SettingsView())
-        view.frame = NSRect(x: 0, y: 0, width: 340, height: 460)
-
-        let win = NSWindow(
-            contentRect: view.frame,
-            styleMask: [.titled, .closable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        win.title = "ClickGuard"
-        win.titlebarAppearsTransparent = true
-        win.contentView = view
-        win.center()
-        win.isReleasedWhenClosed = false
-        win.delegate = self
-        settingsWindow = win
-
-        win.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Accessibility
@@ -89,14 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     MouseFilter.shared.start()
                 }
             }
-        }
-    }
-}
-
-extension AppDelegate: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        if (notification.object as? NSWindow) === settingsWindow {
-            settingsWindow = nil
         }
     }
 }
