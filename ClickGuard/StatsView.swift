@@ -13,6 +13,10 @@ struct StatsView: View {
             header
             Divider().opacity(0.5)
             counters
+            TrackpadView()
+                .frame(height: 130)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             Divider().opacity(0.5)
             listHeader
             list
@@ -154,5 +158,76 @@ struct StatsView: View {
         case .scroll:                return "scroll"
         case .drag:                  return "hand.draw"
         }
+    }
+}
+
+// MARK: - Decorative MacBook-style trackpad
+
+private struct TrackpadView: View {
+    private struct Ripple: Identifiable { let id = UUID(); let pos: CGPoint }
+    @State private var ripples: [Ripple] = []
+
+    var body: some View {
+        ZStack {
+            // Recessed glass surface
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.92), Color(white: 0.86)],
+                        startPoint: .top, endPoint: .bottom)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                )
+                .overlay(
+                    // top inner highlight for the "glass" feel
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.7), lineWidth: 1)
+                        .blur(radius: 1)
+                        .mask(LinearGradient(colors: [.white, .clear],
+                                             startPoint: .top, endPoint: .center))
+                )
+                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+
+            // Click ripples
+            ForEach(ripples) { r in
+                RippleCircle().position(r.pos)
+            }
+
+            Text("tap to test")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.black.opacity(0.18))
+                .allowsHitTesting(false)
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onEnded { value in
+                    let r = Ripple(pos: value.location)
+                    ripples.append(r)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        ripples.removeAll { $0.id == r.id }
+                    }
+                }
+        )
+    }
+}
+
+private struct RippleCircle: View {
+    @State private var scale: CGFloat = 0.2
+    @State private var opacity: Double = 0.6
+    var body: some View {
+        Circle()
+            .stroke(Color.accentColor, lineWidth: 2)
+            .frame(width: 60, height: 60)
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.6)) {
+                    scale = 1.4
+                    opacity = 0
+                }
+            }
     }
 }
