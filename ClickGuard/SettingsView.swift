@@ -198,48 +198,43 @@ struct SettingsView: View {
 
     private var activityCard: some View {
         CardView {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Recent filtered events")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if !filter.recentEvents.isEmpty {
-                        Button("Clear") {
-                            withAnimation { filter.recentEvents.removeAll() }
-                        }
-                        .font(.system(size: 11))
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.accentColor)
+            VStack(spacing: 10) {
+                HStack(spacing: 0) {
+                    VStack(spacing: 2) {
+                        Text("\(filter.sessionCount)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                            .contentTransition(.numericText())
+                            .animation(.snappy, value: filter.sessionCount)
+                        Text("this session").font(.system(size: 10)).foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    Divider().frame(height: 32)
+                    VStack(spacing: 2) {
+                        Text("\(filter.allTimeCount)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                            .contentTransition(.numericText())
+                            .animation(.snappy, value: filter.allTimeCount)
+                        Text("all time").font(.system(size: 10)).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
 
-                if filter.recentEvents.isEmpty {
-                    Text("Nothing filtered yet")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                } else {
-                    VStack(spacing: 3) {
-                        ForEach(filter.recentEvents.prefix(6), id: \.date) { ev in
-                            HStack(spacing: 6) {
-                                Image(systemName: icon(for: ev.kind))
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.tertiary)
-                                    .frame(width: 14)
-                                Text(ev.kind.rawValue)
-                                    .font(.system(size: 11))
-                                Spacer()
-                                Text(ev.date, style: .relative)
-                                    .font(.system(size: 10).monospacedDigit())
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        }
+                Button {
+                    NotificationCenter.default.post(name: .openClickGuardStats, object: nil)
+                } label: {
+                    HStack {
+                        Image(systemName: "list.bullet.rectangle")
+                        Text("See all blocked clicks")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(.tertiary)
                     }
-                    .animation(.spring(duration: 0.3), value: filter.recentEvents.count)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
             }
             .padding(10)
         }
@@ -270,14 +265,6 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, 4)
             .padding(.top, 2)
-    }
-
-    private func icon(for kind: FilterEvent.Kind) -> String {
-        switch kind {
-        case .left, .right, .middle: return "hand.tap.fill"
-        case .scroll:                return "scroll"
-        case .drag:                  return "hand.draw"
-        }
     }
 
     private func applyThresholdInput() {

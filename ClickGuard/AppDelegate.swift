@@ -1,17 +1,50 @@
 import Cocoa
 import SwiftUI
 
+extension Notification.Name {
+    static let openClickGuardStats = Notification.Name("openClickGuardStats")
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var accessibilityTimer: Timer?
+    private var statsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupPopover()
         setupStatusItem()
         requestAccessibilityAndStart()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(openStats),
+            name: .openClickGuardStats, object: nil)
+    }
+
+    // MARK: - Stats window
+
+    @objc func openStats() {
+        popover.close()
+        if let win = statsWindow {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let view = NSHostingView(rootView: StatsView())
+        let win = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 560),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        win.title = "ClickGuard — Blocked Clicks"
+        win.titlebarAppearsTransparent = true
+        win.contentView = view
+        win.center()
+        win.isReleasedWhenClosed = false
+        win.delegate = self
+        statsWindow = win
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Popover
@@ -79,6 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     MouseFilter.shared.start()
                 }
             }
+        }
+    }
+}
+
+extension AppDelegate: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if (notification.object as? NSWindow) === statsWindow {
+            statsWindow = nil
         }
     }
 }

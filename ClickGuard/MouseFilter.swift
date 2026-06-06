@@ -2,7 +2,7 @@ import Cocoa
 import CoreGraphics
 import ClickGuardCore
 
-struct FilterEvent {
+struct FilterEvent: Identifiable {
     enum Kind: String {
         case left   = "Left click"
         case right  = "Right click"
@@ -10,8 +10,10 @@ struct FilterEvent {
         case scroll = "Scroll jitter"
         case drag   = "Drag glitch"
     }
+    let id = UUID()
     let kind: Kind
     let date: Date
+    let gapMs: Double?     // measured inter-event gap that triggered the filter
 }
 
 final class MouseFilter: ObservableObject {
@@ -19,6 +21,10 @@ final class MouseFilter: ObservableObject {
 
     @Published private(set) var isRunning = false
     @Published var recentEvents: [FilterEvent] = []
+    @Published private(set) var sessionCount = 0
+    @Published private(set) var allTimeCount = UserDefaults.standard.integer(forKey: "allTimeBlocked")
+
+    private let maxHistory = 200
 
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -195,16 +201,25 @@ final class MouseFilter: ObservableObject {
 
     private func log(_ kind: DebounceEngine.LogKind) {
         let fk: FilterEvent.Kind
+        let gap: Double?
         switch kind {
-        case .click(let b): fk = (b == 0 ? .left : b == 1 ? .right : .middle)
-        case .scroll:       fk = .scroll
-        case .drag:         fk = .drag
+        case .click(let b, let g): fk = (b == 0 ? .left : b == 1 ? .right : .middle); gap = g
+        case .scroll(let g):       fk = .scroll; gap = g
+        case .drag:                fk = .drag;   gap = nil
         }
-        let ev = FilterEvent(kind: fk, date: Date())
+        let ev = FilterEvent(kind: fk, date: Date(), gapMs: gap)
         DispatchQueue.main.async {
             self.recentEvents.insert(ev, at: 0)
-            if self.recentEvents.count > 30 { self.recentEvents.removeLast() }
+            if self.recentEvents.count > self.maxHistory { self.recentEvents.removeLast() }
+            self.sessionCount += 1
+            self.allTimeCount += 1
+            UserDefaults.standard.set(self.allTimeCount, forKey: "allTimeBlocked")
         }
+    }
+
+    func clearHistory() {
+        recentEvents.removeAll()
+        sessionCount = 0
     }
 }
 

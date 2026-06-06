@@ -39,7 +39,11 @@ public final class DebounceEngine {
         case suppressAndCancelRelease(button: Int)
     }
 
-    public enum LogKind: Equatable { case click(Int), scroll, drag }
+    public enum LogKind: Equatable {
+        case click(button: Int, gapMs: Double)
+        case scroll(gapMs: Double)
+        case drag
+    }
 
     public var config: Config
 
@@ -82,7 +86,7 @@ public final class DebounceEngine {
         if config.clickEnabled(button), let lastUp = lastUpTime[button],
            (now - lastUp) < ms(config.clickThresholdMs) {
             suppressNextUp[button] = true
-            onLog?(.click(button))
+            onLog?(.click(button: button, gapMs: (now - lastUp) * 1000))
             return .suppress
         }
 
@@ -138,24 +142,25 @@ public final class DebounceEngine {
     public func onScroll(deltaVertical: Int, deltaHorizontal: Int, now: TimeInterval) -> Action {
         guard config.scrollEnabled else { return .pass }
         let threshold = ms(config.scrollThresholdMs)
-        if suppressScroll(axis: 0, delta: deltaVertical,   now: now, threshold: threshold) ||
-           suppressScroll(axis: 1, delta: deltaHorizontal, now: now, threshold: threshold) {
-            onLog?(.scroll)
+        if let gap = suppressScroll(axis: 0, delta: deltaVertical,   now: now, threshold: threshold)
+                  ?? suppressScroll(axis: 1, delta: deltaHorizontal, now: now, threshold: threshold) {
+            onLog?(.scroll(gapMs: gap * 1000))
             return .suppress
         }
         return .pass
     }
 
-    private func suppressScroll(axis: Int, delta: Int, now: TimeInterval, threshold: TimeInterval) -> Bool {
-        guard delta != 0 else { return false }
+    /// Returns the reversal gap (seconds) if this tick is jitter, else nil.
+    private func suppressScroll(axis: Int, delta: Int, now: TimeInterval, threshold: TimeInterval) -> TimeInterval? {
+        guard delta != 0 else { return nil }
         let dir = delta > 0 ? 1 : -1
         if let last = lastScrollDir[axis], last != 0, dir != last,
            let t = lastScrollTime[axis], (now - t) < threshold {
-            return true
+            return now - t
         }
         lastScrollDir[axis]  = dir
         lastScrollTime[axis] = now
-        return false
+        return nil
     }
 
     // MARK: - Test hooks / introspection
