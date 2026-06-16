@@ -10,33 +10,44 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             statusHeader
-            Divider().opacity(0.5)
+            Divider().opacity(0.25)
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 12) {
-                    sectionLabel("DOUBLE-CLICK FIX")
-                    thresholdCard
-                    buttonsCard
-
-                    sectionLabel("SCROLL WHEEL FIX")
-                    scrollCard
-
-                    sectionLabel("DRAG & DROP FIX")
-                    dragCard
-
-                    sectionLabel("GENERAL")
-                    generalCard
-
-                    sectionLabel("ACTIVITY")
-                    activityCard
+                VStack(spacing: 16) {
+                    sectionGroup("CLICK DEBOUNCE") {
+                        thresholdCard
+                        buttonsCard
+                    }
+                    sectionGroup("SCROLL WHEEL") {
+                        scrollCard
+                    }
+                    sectionGroup("DRAG & DROP") {
+                        dragCard
+                    }
+                    sectionGroup("GENERAL") {
+                        generalCard
+                    }
+                    sectionGroup("ACTIVITY") {
+                        activityCard
+                    }
                 }
                 .padding(14)
+                .padding(.bottom, 4)
             }
-            Divider().opacity(0.5)
+            Divider().opacity(0.25)
             footer
         }
         .frame(width: 300)
         .background(.ultraThinMaterial)
         .onAppear { thresholdInput = "\(settings.thresholdMs)" }
+    }
+
+    // MARK: - Section group
+
+    private func sectionGroup<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionLabel(title)
+            content()
+        }
     }
 
     // MARK: - Status header
@@ -45,15 +56,17 @@ struct SettingsView: View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(filter.isRunning ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
-                    .frame(width: 32, height: 32)
-                    .scaleEffect(pulsing ? 1.15 : 1.0)
-                    .animation(filter.isRunning
-                        ? .easeInOut(duration: 1.6).repeatForever(autoreverses: true)
-                        : .default,
+                    .fill(filter.isRunning ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
+                    .frame(width: 30, height: 30)
+                    .scaleEffect(pulsing ? 1.12 : 1.0)
+                    .animation(
+                        filter.isRunning
+                            ? .easeInOut(duration: 1.8).repeatForever(autoreverses: true)
+                            : .default,
                         value: pulsing)
                 Image(systemName: "cursorarrow.click.2")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(filter.isRunning ? Color.green : Color.red)
             }
             .onAppear { pulsing = filter.isRunning }
@@ -62,21 +75,21 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("ClickGuard")
                     .font(.system(size: 13, weight: .semibold))
-                Text(filter.isRunning ? "Active" : "Accessibility access required")
+                Text(filter.isRunning ? "Active" : "Accessibility required")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
             Spacer()
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Threshold
 
     private var thresholdCard: some View {
-        CardView {
-            VStack(alignment: .leading, spacing: 8) {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Threshold")
                         .font(.system(size: 12, weight: .medium))
@@ -90,7 +103,7 @@ struct SettingsView: View {
                             .onSubmit { applyThresholdInput() }
                         Text("ms")
                             .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                     }
                 }
                 Slider(
@@ -109,23 +122,24 @@ struct SettingsView: View {
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(12)
         }
     }
 
     // MARK: - Buttons
 
     private var buttonsCard: some View {
-        CardView {
+        GlassCard {
             VStack(spacing: 0) {
-                CardRow(first: true) {
+                GlassRow(first: true) {
                     ToggleRow(label: "Left button",   icon: "cursorarrow", isOn: $settings.leftEnabled)
                 }
-                Divider().padding(.leading, 32).opacity(0.4)
-                CardRow {
+                GlassDivider()
+                GlassRow {
                     ToggleRow(label: "Right button",  icon: "cursorarrow", isOn: $settings.rightEnabled)
                 }
-                Divider().padding(.leading, 32).opacity(0.4)
-                CardRow(last: true) {
+                GlassDivider()
+                GlassRow(last: true) {
                     ToggleRow(label: "Middle button", icon: "scroll",      isOn: $settings.middleEnabled)
                 }
             }
@@ -135,14 +149,14 @@ struct SettingsView: View {
     // MARK: - Scroll wheel fix
 
     private var scrollCard: some View {
-        CardView {
+        GlassCard {
             VStack(spacing: 0) {
-                CardRow(first: settings.scrollFixEnabled ? false : true, last: !settings.scrollFixEnabled) {
+                GlassRow(first: true, last: !settings.scrollFixEnabled) {
                     ToggleRow(label: "Filter scroll jitter", icon: "scroll", isOn: $settings.scrollFixEnabled)
                 }
                 if settings.scrollFixEnabled {
-                    Divider().padding(.leading, 32).opacity(0.4)
-                    CardRow(last: true) {
+                    GlassDivider()
+                    GlassRow(last: true) {
                         StepperRow(label: "Reversal threshold",
                                    value: $settings.scrollThresholdMs,
                                    range: 1...300, step: 5, unit: "ms")
@@ -155,10 +169,10 @@ struct SettingsView: View {
     // MARK: - Drag & drop fix
 
     private var dragCard: some View {
-        CardView {
+        GlassCard {
             VStack(spacing: 0) {
-                CardRow(first: true, last: !settings.dragFixEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
+                GlassRow(first: true, last: !settings.dragFixEnabled) {
+                    VStack(alignment: .leading, spacing: 3) {
                         ToggleRow(label: "Prevent drops while dragging", icon: "hand.draw", isOn: $settings.dragFixEnabled)
                         Text("Experimental — enable only if your mouse drops items mid-drag.")
                             .font(.system(size: 10))
@@ -167,14 +181,14 @@ struct SettingsView: View {
                     }
                 }
                 if settings.dragFixEnabled {
-                    Divider().padding(.leading, 32).opacity(0.4)
-                    CardRow {
+                    GlassDivider()
+                    GlassRow {
                         StepperRow(label: "Drag start delay",
                                    value: $settings.dragStartDelayMs,
                                    range: 100...3000, step: 100, unit: "ms")
                     }
-                    Divider().padding(.leading, 32).opacity(0.4)
-                    CardRow(last: true) {
+                    GlassDivider()
+                    GlassRow(last: true) {
                         StepperRow(label: "Release delay",
                                    value: $settings.dragReleaseDelayMs,
                                    range: 50...500, step: 25, unit: "ms")
@@ -187,8 +201,8 @@ struct SettingsView: View {
     // MARK: - General
 
     private var generalCard: some View {
-        CardView {
-            CardRow(first: true, last: true) {
+        GlassCard {
+            GlassRow(first: true, last: true) {
                 ToggleRow(label: "Launch at login", icon: "power", isOn: $settings.launchAtLogin)
             }
         }
@@ -197,46 +211,55 @@ struct SettingsView: View {
     // MARK: - Activity
 
     private var activityCard: some View {
-        CardView {
-            VStack(spacing: 10) {
+        GlassCard {
+            VStack(spacing: 12) {
                 HStack(spacing: 0) {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         Text("\(filter.sessionCount)")
-                            .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                            .font(.system(size: 24, weight: .bold, design: .rounded).monospacedDigit())
                             .contentTransition(.numericText())
                             .animation(.snappy, value: filter.sessionCount)
-                        Text("this session").font(.system(size: 10)).foregroundStyle(.secondary)
+                        Text("this session")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
-                    Divider().frame(height: 32)
-                    VStack(spacing: 2) {
+                    Divider().frame(height: 28).opacity(0.4)
+                    VStack(spacing: 3) {
                         Text("\(filter.allTimeCount)")
-                            .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                            .font(.system(size: 24, weight: .bold, design: .rounded).monospacedDigit())
                             .contentTransition(.numericText())
                             .animation(.snappy, value: filter.allTimeCount)
-                        Text("all time").font(.system(size: 10)).foregroundStyle(.secondary)
+                        Text("all time")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
+                .padding(.vertical, 4)
 
                 Button {
                     NotificationCenter.default.post(name: .openClickGuardStats, object: nil)
                 } label: {
                     HStack {
                         Image(systemName: "list.bullet.rectangle")
+                            .symbolRenderingMode(.hierarchical)
                         Text("See all blocked clicks")
                         Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
                     }
                     .font(.system(size: 12))
-                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
-                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                    .background(.tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.tint)
             }
-            .padding(10)
+            .padding(12)
         }
     }
 
@@ -248,9 +271,9 @@ struct SettingsView: View {
             Button("Quit ClickGuard") {
                 NSApplication.shared.terminate(nil)
             }
-            .font(.system(size: 12))
+            .font(.system(size: 11))
             .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.tertiary)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
         }
@@ -261,10 +284,10 @@ struct SettingsView: View {
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.secondary)
+            .tracking(0.5)
+            .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 4)
-            .padding(.top, 2)
+            .padding(.leading, 2)
     }
 
     private func applyThresholdInput() {
@@ -276,30 +299,49 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Reusable components
+// MARK: - Glass design system
 
-private struct CardView<Content: View>: View {
+private struct GlassCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
         content
-            .background(.background.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.primary.opacity(0.07), lineWidth: 0.5)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.regularMaterial)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.22), Color.primary.opacity(0.04)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 0.75
+                    )
+            )
+            .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
     }
 }
 
-private struct CardRow<Content: View>: View {
+private struct GlassRow<Content: View>: View {
     var first = false
     var last  = false
     @ViewBuilder let content: Content
 
     var body: some View {
         content
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+    }
+}
+
+private struct GlassDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.leading, 12)
+            .opacity(0.3)
     }
 }
 
@@ -312,6 +354,7 @@ private struct ToggleRow: View {
         Toggle(isOn: $isOn) {
             Label(label, systemImage: icon)
                 .font(.system(size: 12))
+                .symbolRenderingMode(.hierarchical)
                 .labelStyle(.titleAndIcon)
         }
         .toggleStyle(.switch)
